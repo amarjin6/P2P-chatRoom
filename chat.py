@@ -3,6 +3,7 @@ import threading
 import sys
 import os
 import time
+from datetime import datetime
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
@@ -24,9 +25,19 @@ GREETING = '''
 \u263A Welcome to chat! \u263A
 Here are some tips for YOU:
 * /members - Show all connected members
-* /history - Request history from members
+* /help - Show how this message
 * /hooray - Beautiful greeting message
+* /history - Request history from members
 @Created by Alexander Marjin@
+'''
+
+HOORAY = '''
+Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+when an unknown printer took a galley of type and scrambled it to make a type specimen book.
+It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged.
+It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently
+with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
 '''
 
 
@@ -40,6 +51,10 @@ def usage():
 
 
 def create():
+    '''
+    Creates a socket object
+    :return: socket, username, empty dictionary
+    '''
     if len(sys.argv) != 3:
         usage()
 
@@ -54,11 +69,21 @@ def create():
 
 
 def connect(s: socket.socket, name: str):
+    '''
+    Connects to all online members
+    :param: s: current socket
+    :param: name: current name
+    '''
     while True:
         s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
 
 
 def check(s: socket.socket, members: dict):
+    '''
+    Checks whether there is still connected members
+    :param: s: current socket
+    :param: members: dictionary with connected members
+    '''
     while True:
         for addr in list(members.keys()):
             time.sleep(10)
@@ -85,6 +110,11 @@ def check(s: socket.socket, members: dict):
 
 
 def listen(s: socket.socket, members: dict):
+    '''
+    Listens and analyze sent messages
+    :param s: current socket
+    :param members: dictionary with connected members
+    '''
     while True:
         try:
             msg, addr = s.recvfrom(UDP_SIZE)
@@ -100,12 +130,35 @@ def listen(s: socket.socket, members: dict):
             print(f'{msg[6:].decode()} joined chat')
             continue
 
-        elif msg_text[:6] != '__join':
-            print(f'{members[addr]}: {msg_text}')
+        elif msg_text[:6] != '__join' and msg_text[:8] == '/members':
+            print('All active members:')
+            for addr in list(members.keys()):
+                print(f'{members[addr]}: {addr[0]}')
+            continue
+
+        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] == '/help':
+            print(f'{members[addr]}: {GREETING}')
+            continue
+
+        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
+                                                                                                     :7] == '/hooray':
+            print(f'{members[addr]}: {HOORAY}')
+            continue
+
+        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
+                                                                                                     :7] != '/hooray':
+            now = datetime.now()
+            print(f'{now.strftime("%H:%M:%S")} {members[addr]}: {msg_text}')
             continue
 
 
 def send(s: socket.socket, members: dict):
+    '''
+    Sends message to all members
+    :param s: current socket
+    :param members: dictionary with connected members
+    :return:
+    '''
     while True:
         ss = input('')
         for addr in list(members.keys()):
