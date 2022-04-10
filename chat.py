@@ -168,11 +168,13 @@ def send(s: socket.socket, members: dict):
 def main():
     s, name, members = create()
     greeting()
+    # Create threads
     t1 = threading.Thread(target=connect, args=(s, name))
     t2 = threading.Thread(target=listen, args=(s, members))
     t3 = threading.Thread(target=check, args=(s, members))
     t4 = threading.Thread(target=send, args=(s, members))
 
+    # Start threads
     t1.start()
     t2.start()
     t3.start()
