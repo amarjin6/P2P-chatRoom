@@ -5,7 +5,7 @@ UDP_SIZE = 65535  # UDP protocol maximus
 
 DEFAULT_IP = '127.0.0.1'  # Default listening IP
 
-DEFAULT_PORT = 8000  # Default listening port
+PORT = 8000  # Default listening port
 
 USAGE = '''
 [?] How to use [?]
@@ -26,10 +26,10 @@ def usage():
     print(USAGE)
 
 
-def listen(host: str = DEFAULT_IP, port: int = DEFAULT_PORT):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Create socket object on UDP connection
-    s.bind((host, port))
-    members = {}
+members = {}
+
+
+def listen():
     while True:
         msg, addr = s.recvfrom(UDP_SIZE)
 
@@ -40,31 +40,42 @@ def listen(host: str = DEFAULT_IP, port: int = DEFAULT_PORT):
         if msg_text[:6] == '__join' and addr not in members:
             members[addr] = msg[6:].decode()
             for addr in members.keys():
-                s.sendto(f'{msg[6:].decode()} joined chat'.encode('utf-8'), addr)
+                print(f'{msg[6:].decode()} joined chat')
+            continue
+
+        elif msg_text[:6] != '__join':
+            print(msg_text)
             continue
 
 
 def connect():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    IP = input('Enter IP:')
-    port = int(input('Enter port:'))
-    name = input('Enter name:')
-    s.bind((IP, port))
-    sendto = (DEFAULT_IP, DEFAULT_PORT)
-    s.sendto(f'__join{name}'.encode('utf-8'), sendto)
     while True:
-        msg, addr = s.recvfrom(UDP_SIZE)
+        s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
 
-        if not msg:
-            continue
 
-        msg_text = msg.decode('utf-8')
-        print(msg_text)
+def create():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    IP = input('Enter IP:')
+    name = input('Enter name:')
+    s.bind((IP, PORT))
+    return s, name
+
+
+def send():
+    while True:
+        ss = input('')
+        for addr in members.keys():
+            s.sendto(f'{name}: {ss}'.encode('utf-8'), addr)
 
 
 if __name__ == '__main__':
     greeting()
+    s, name = create()
     t1 = threading.Thread(target=listen)
     t2 = threading.Thread(target=connect)
+    t3 = threading.Thread(target=send)
     t1.start()
     t2.start()
+    t3.start()
