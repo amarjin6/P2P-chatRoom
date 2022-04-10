@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 import os
+import time
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
@@ -50,9 +51,34 @@ def connect(s: socket.socket, name: str):
         s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
 
 
+def check(s: socket.socket, members: dict):
+    while True:
+        for addr in list(members.keys()):
+            s.sendto(f'__alive{addr[0]}'.encode('utf-8'), addr)
+            time.sleep(15)
+            try:
+                msg, addr1 = s.recvfrom(UDP_SIZE)
+            except ConnectionResetError:
+                continue
+
+            if msg.decode('utf-8')[:5] == '__yes':
+                print(msg.decode('utf-8'))
+                print('OK!')
+                continue
+
+            else:
+                print(f'{members[addr]} left chat')
+                print(msg.decode('utf-8'))
+                del members[addr]
+                continue
+
+
 def listen(s: socket.socket, members: dict):
     while True:
-        msg, addr = s.recvfrom(UDP_SIZE)
+        try:
+            msg, addr = s.recvfrom(UDP_SIZE)
+        except ConnectionResetError:
+            continue
 
         if not msg:
             continue
@@ -63,7 +89,13 @@ def listen(s: socket.socket, members: dict):
             print(f'{msg[6:].decode()} joined chat')
             continue
 
-        elif msg_text[:6] != '__join':
+        elif msg_text[:7] == '__alive':
+            sendto = (msg_text[7:], PORT)
+            s.sendto(f'__yes{addr[0]}'.encode('utf-8'), sendto)
+            continue
+
+
+        elif msg_text[:6] != '__join' and msg_text[:7] != '__alive' and msg_text[:5] != '__yes':
             print(f'{members[addr]}: {msg_text}')
             continue
 
@@ -80,11 +112,13 @@ def main():
     greeting()
     t1 = threading.Thread(target=connect, args=(s, name))
     t2 = threading.Thread(target=listen, args=(s, members))
-    t3 = threading.Thread(target=send, args=(s, members))
+    t3 = threading.Thread(target=check, args=(s, members))
+    t4 = threading.Thread(target=send, args=(s, members))
 
     t1.start()
     t2.start()
     t3.start()
+    t4.start()
 
 
 if __name__ == '__main__':
