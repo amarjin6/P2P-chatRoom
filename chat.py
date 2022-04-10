@@ -8,6 +8,8 @@ UDP_SIZE = 65535  # UDP protocol maximus
 
 PORT = 8000  # Default listening port
 
+OFFSET = 2  # Offset for checking connection
+
 USAGE = '''
 [?] How to use [?]
 python chat.py [host] [username]
@@ -20,6 +22,11 @@ python chat.py 192.168.0.1 John
 
 GREETING = '''
 \u263A Welcome to chat! \u263A
+Here are some tips for YOU:
+* /members - Show all connected members
+* /history - Request history from members
+* /hooray - Beautiful greeting message
+@Created by Alexander Marjin@
 '''
 
 
@@ -37,8 +44,8 @@ def create():
         usage()
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # indicates that packets will be broadcast
     IP = sys.argv[1]
     name = sys.argv[2]
     members = {}
@@ -54,21 +61,25 @@ def connect(s: socket.socket, name: str):
 def check(s: socket.socket, members: dict):
     while True:
         for addr in list(members.keys()):
-            s.sendto(f'__alive{addr[0]}'.encode('utf-8'), addr)
-            time.sleep(15)
+            time.sleep(10)
+            m = []
             try:
-                msg, addr1 = s.recvfrom(UDP_SIZE)
+                for i in range(len(list(members.keys())) + OFFSET):
+                    msg, addr1 = s.recvfrom(UDP_SIZE)
+                    msg_text = msg.decode('utf-8')
+                    m.append(msg_text)
+
             except ConnectionResetError:
                 continue
 
-            if msg.decode('utf-8')[:5] == '__yes':
-                print(msg.decode('utf-8'))
-                print('OK!')
-                continue
+            f = False
+            for msg_text in m:
+                if msg_text[:6] == '__join' and members[addr] == msg_text[6:]:
+                    f = True
+                    continue
 
-            else:
+            if not f:
                 print(f'{members[addr]} left chat')
-                print(msg.decode('utf-8'))
                 del members[addr]
                 continue
 
@@ -89,13 +100,7 @@ def listen(s: socket.socket, members: dict):
             print(f'{msg[6:].decode()} joined chat')
             continue
 
-        elif msg_text[:7] == '__alive':
-            sendto = (msg_text[7:], PORT)
-            s.sendto(f'__yes{addr[0]}'.encode('utf-8'), sendto)
-            continue
-
-
-        elif msg_text[:6] != '__join' and msg_text[:7] != '__alive' and msg_text[:5] != '__yes':
+        elif msg_text[:6] != '__join':
             print(f'{members[addr]}: {msg_text}')
             continue
 
@@ -103,7 +108,7 @@ def listen(s: socket.socket, members: dict):
 def send(s: socket.socket, members: dict):
     while True:
         ss = input('')
-        for addr in members.keys():
+        for addr in list(members.keys()):
             s.sendto(ss.encode('utf-8'), addr)
 
 
