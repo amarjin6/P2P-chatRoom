@@ -4,6 +4,7 @@ import sys
 import os
 import time
 from datetime import datetime
+import keyboard
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
@@ -15,9 +16,9 @@ USAGE = '''
 [?] How to use [?]
 python chat.py [host] [username]
 (?) Examples (?)
-python chat.py 192.168.0.1 Alex
-python chat.py 192.168.0.1 Tim
-python chat.py 192.168.0.1 John
+python chat.py 127.0.0.1 Alex
+python chat.py 127.0.0.2 Tim
+python chat.py 127.0.0.3 John
 [?] How to use [?]
 '''
 
@@ -55,6 +56,7 @@ def create():
     Creates a socket object
     :return: socket, username, empty dictionary
     '''
+
     if len(sys.argv) != 3:
         usage()
 
@@ -74,8 +76,13 @@ def connect(s: socket.socket, name: str):
     :param: s: current socket
     :param: name: current name
     '''
+
     while True:
-        s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
+        try:
+            s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
 
 
 def check(s: socket.socket, members: dict):
@@ -84,29 +91,35 @@ def check(s: socket.socket, members: dict):
     :param: s: current socket
     :param: members: dictionary with connected members
     '''
+
     while True:
-        for addr in list(members.keys()):
-            time.sleep(10)
-            m = []
-            try:
-                for i in range(len(list(members.keys())) + OFFSET):
-                    msg, addr1 = s.recvfrom(UDP_SIZE)
-                    msg_text = msg.decode('utf-8')
-                    m.append(msg_text)
+        try:
+            for addr in list(members.keys()):
+                time.sleep(10)
+                m = []
+                try:
+                    for i in range(len(list(members.keys())) + OFFSET):
+                        msg, addr1 = s.recvfrom(UDP_SIZE)
+                        msg_text = msg.decode('utf-8')
+                        m.append(msg_text)
 
-            except ConnectionResetError:
-                continue
-
-            f = False
-            for msg_text in m:
-                if msg_text[:6] == '__join' and members[addr] == msg_text[6:]:
-                    f = True
+                except ConnectionResetError:
                     continue
 
-            if not f:
-                print(f'{members[addr]} left chat')
-                del members[addr]
-                continue
+                f = False
+                for msg_text in m:
+                    if msg_text[:6] == '__join' and members[addr] == msg_text[6:]:
+                        f = True
+                        continue
+
+                if not f:
+                    print(f'{members[addr]} left chat')
+                    del members[addr]
+                    continue
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
 
 
 def listen(s: socket.socket, members: dict):
@@ -115,11 +128,17 @@ def listen(s: socket.socket, members: dict):
     :param s: current socket
     :param members: dictionary with connected members
     '''
+
+    history: list[str] = []
     while True:
         try:
             msg, addr = s.recvfrom(UDP_SIZE)
         except ConnectionResetError:
             continue
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
 
         if not msg:
             continue
@@ -146,9 +165,18 @@ def listen(s: socket.socket, members: dict):
             continue
 
         elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
-                                                                                                     :7] != '/hooray':
+                                                                                                     :7] != '/hooray' and msg_text[
+                                                                                                                          :8] == '/history':
+            print('HISTORY:')
+            for hist in history:
+                print(hist)
+
+        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
+                                                                                                     :7] != '/hooray' and msg_text[
+                                                                                                                          :8] != '/history':
             now = datetime.now()
             print(f'{now.strftime("%H:%M:%S")} {members[addr]}: {msg_text}')
+            history.append(f'{now.strftime("%H:%M:%S")} {members[addr]}: {msg_text}')
             continue
 
 
@@ -159,13 +187,20 @@ def send(s: socket.socket, members: dict):
     :param members: dictionary with connected members
     :return:
     '''
+
     while True:
-        ss = input('')
-        for addr in list(members.keys()):
-            s.sendto(ss.encode('utf-8'), addr)
+        try:
+            ss = input('')
+            for addr in list(members.keys()):
+                s.sendto(ss.encode('utf-8'), addr)
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
 
 
 def main():
+    # Create socket with its tools
     s, name, members = create()
     greeting()
     # Create threads
