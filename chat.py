@@ -63,6 +63,7 @@ def create_udp():
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # indicates that packets will be broadcast
+
     except socket.error as e:
         print(f'Failed to create UDP socket: {e}')
         sys.exit()
@@ -72,9 +73,11 @@ def create_udp():
     members = {}
     try:
         s.bind((IP, PORT))
+
     except socket.error as e:
         print(f'Failed connection to host: {e}')
         sys.exit()
+
     return s, name, members, IP
 
 
@@ -82,17 +85,20 @@ def create_tcp(ip: str):
     '''
     Creates TCP socket object for delivery members messages
     :param ip: member IP
-    :return: TCP socket
+    :return: TCP socket object
     '''
+
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
+
     except socket.error as e:
         print(f'Failed to create TCP socket: {e}')
         sys.exit()
 
     try:
         s.bind((ip, PORT))
+
     except socket.error as e:
         print(f'Failed connection to host: {e}')
         sys.exit()
@@ -111,20 +117,55 @@ def connect(s: socket.socket, name: str):
         try:
             s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
             time.sleep(5)
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
+
+
+def check_connection(members: dict):
+    '''
+    Checks whether there is still connected members
+    :param members: members dict
+    '''
+    while True:
+        try:
+            for addr in list(members.keys()):
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                try:
+                    s.connect(addr)
+                    s.send('?'.encode('utf-8'))
+
+                except socket.error:
+                    print(f'{members[addr]} left chat')
+                    del members[addr]
+
+                time.sleep(5)
+                s.close()
+
         except KeyboardInterrupt:
             print('Bye!')
             sys.exit()
 
 
 def listen_udp(s: socket.socket, members: dict):
+    '''
+    Add new members to the chat
+    :param s: UDP socket object
+    :param members: members dict
+    '''
+
     while True:
         try:
             msg, addr = s.recvfrom(UDP_SIZE)
+
         except ConnectionResetError:
             continue
 
         except KeyboardInterrupt:
             print('Bye!')
+            s.close()
             sys.exit()
 
         if not msg:
@@ -155,6 +196,7 @@ def listen_tcp(s: socket.socket, members: dict):
 
         except KeyboardInterrupt:
             print('Bye!')
+            s.close()
             sys.exit()
 
 
@@ -165,6 +207,7 @@ def send(s: socket.socket, members: dict):
     :param s: current socket
     :param members: dictionary with connected members
     '''
+
     while True:
         try:
             ss = input('')
@@ -178,37 +221,12 @@ def send(s: socket.socket, members: dict):
 
         except KeyboardInterrupt:
             print('Bye!')
-            sys.exit()
-
-
-def check_connection(members: dict):
-    '''
-    Checks whether there is still connected members
-    :param members: list with members
-    '''
-    while True:
-        try:
-            for addr in list(members.keys()):
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                try:
-                    s.connect(addr)
-                    s.send('?'.encode('utf-8'))
-
-                except socket.error:
-                    print(f'{members[addr]} left chat')
-                    del members[addr]
-
-                time.sleep(5)
-                s.close()
-
-        except KeyboardInterrupt:
-            print('Bye!')
+            s.close()
             sys.exit()
 
 
 def main():
-    # Create socket with its tools
+    # Create TCP/UDP sockets with its tools
     s, name, members, IP = create_udp()
     sock = create_tcp(IP)
     greeting()
