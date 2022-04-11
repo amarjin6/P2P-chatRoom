@@ -52,10 +52,10 @@ def usage():
 
 
 def create_udp():
-    '''
+    """
     Creates a UDP socket object to find out who is online
     :return: UDP socket, username, empty dictionary, IP
-    '''
+    """
 
     if len(sys.argv) != 3:
         usage()
@@ -82,11 +82,11 @@ def create_udp():
 
 
 def create_tcp(ip: str):
-    '''
+    """
     Creates TCP socket object for delivery members messages
     :param ip: member IP
     :return: TCP socket object
-    '''
+    """
 
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,11 +107,11 @@ def create_tcp(ip: str):
 
 
 def connect(s: socket.socket, name: str):
-    '''
+    """
     Connects to all online members
     :param: s: current socket
     :param: name: current name
-    '''
+    """
 
     while True:
         try:
@@ -124,10 +124,10 @@ def connect(s: socket.socket, name: str):
 
 
 def check_connection(members: dict):
-    '''
+    """
     Checks whether there is still connected members
     :param members: members dict
-    '''
+    """
     while True:
         try:
             for addr in list(members.keys()):
@@ -150,11 +150,11 @@ def check_connection(members: dict):
 
 
 def listen_udp(s: socket.socket, members: dict):
-    '''
+    """
     Add new members to the chat
     :param s: UDP socket object
     :param members: members dict
-    '''
+    """
 
     while True:
         try:
@@ -179,11 +179,11 @@ def listen_udp(s: socket.socket, members: dict):
 
 
 def listen_tcp(s: socket.socket, members: dict):
-    '''
+    """
     Listens and analyze sent messages
     :param s: current socket
     :param members: dictionary with connected members
-    '''
+    """
 
     while True:
         try:
@@ -201,12 +201,11 @@ def listen_tcp(s: socket.socket, members: dict):
 
 
 def send(s: socket.socket, members: dict):
-    '''
+    """
     Sends message tщ all members
-    :param ip: source IP
     :param s: current socket
     :param members: dictionary with connected members
-    '''
+    """
 
     while True:
         try:
