@@ -1,16 +1,14 @@
 import socket
 import threading
 import sys
-import os
-import time
-from datetime import datetime
-import keyboard
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
+TCP_SIZE = 16384  # TCP protocol size (max = 65535)
+
 PORT = 8000  # Default listening port
 
-OFFSET = 2  # Offset for checking connection
+MEMBERS_AMOUNT = 10  # The number of participants to which the server will simultaneously listen (max = inf)
 
 USAGE = '''
 [?] How to use [?]
@@ -48,10 +46,10 @@ def greeting():
 
 def usage():
     print(USAGE)
-    os._exit(0)
+    sys.exit()
 
 
-def create():
+def create_udp():
     '''
     Creates a socket object
     :return: socket, username, empty dictionary
@@ -59,15 +57,40 @@ def create():
 
     if len(sys.argv) != 3:
         usage()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # indicates that packets will be broadcast
+    except socket.error as e:
+        print(f'Failed to create UDP socket: {e}')
+        sys.exit()
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # indicates that packets will be broadcast
     IP = sys.argv[1]
     name = sys.argv[2]
     members = {}
-    s.bind((IP, PORT))
-    return s, name, members
+    try:
+        s.bind((IP, PORT))
+    except socket.error as e:
+        print(f'Failed connection to host: {e}')
+        sys.exit()
+    return s, name, members, IP
+
+
+def create_tcp(ip: str):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
+    except socket.error as e:
+        print(f'Failed to create TCP socket: {e}')
+        sys.exit()
+
+    try:
+        s.bind((ip, PORT))
+    except socket.error as e:
+        print(f'Failed connection to host: {e}')
+        sys.exit()
+
+    return s
 
 
 def connect(s: socket.socket, name: str):
@@ -85,51 +108,7 @@ def connect(s: socket.socket, name: str):
             sys.exit()
 
 
-def check(s: socket.socket, members: dict):
-    '''
-    Checks whether there is still connected members
-    :param: s: current socket
-    :param: members: dictionary with connected members
-    '''
-
-    while True:
-        try:
-            for addr in list(members.keys()):
-                time.sleep(10)
-                m = []
-                try:
-                    for i in range(len(list(members.keys())) + OFFSET):
-                        msg, addr1 = s.recvfrom(UDP_SIZE)
-                        msg_text = msg.decode('utf-8')
-                        m.append(msg_text)
-
-                except ConnectionResetError:
-                    continue
-
-                f = False
-                for msg_text in m:
-                    if msg_text[:6] == '__join' and members[addr] == msg_text[6:]:
-                        f = True
-                        continue
-
-                if not f:
-                    print(f'{members[addr]} left chat')
-                    del members[addr]
-                    continue
-
-        except KeyboardInterrupt:
-            print('Bye!')
-            sys.exit()
-
-
-def listen(s: socket.socket, members: dict):
-    '''
-    Listens and analyze sent messages
-    :param s: current socket
-    :param members: dictionary with connected members
-    '''
-
-    history: list[str] = []
+def listen_udp(s: socket.socket, members: dict):
     while True:
         try:
             msg, addr = s.recvfrom(UDP_SIZE)
@@ -149,50 +128,45 @@ def listen(s: socket.socket, members: dict):
             print(f'{msg[6:].decode()} joined chat')
             continue
 
-        elif msg_text[:6] != '__join' and msg_text[:8] == '/members':
-            print('All active members:')
-            for addr in list(members.keys()):
-                print(f'{members[addr]}: {addr[0]}')
-            continue
 
-        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] == '/help':
-            print(f'{members[addr]}: {GREETING}')
-            continue
-
-        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
-                                                                                                     :7] == '/hooray':
-            print(f'{members[addr]}: {HOORAY}')
-            continue
-
-        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
-                                                                                                     :7] != '/hooray' and msg_text[
-                                                                                                                          :8] == '/history':
-            print('HISTORY:')
-            for hist in history:
-                print(hist)
-
-        elif msg_text[:6] != '__join' and msg_text[:8] != '/members' and msg_text[:5] != '/help' and msg_text[
-                                                                                                     :7] != '/hooray' and msg_text[
-                                                                                                                          :8] != '/history':
-            now = datetime.now()
-            print(f'{now.strftime("%H:%M:%S")} {members[addr]}: {msg_text}')
-            history.append(f'{now.strftime("%H:%M:%S")} {members[addr]}: {msg_text}')
-            continue
-
-
-def send(s: socket.socket, members: dict):
+def listen_tcp(s: socket.socket, members: dict):
     '''
-    Sends message to all members
+    Listens and analyze sent messages
     :param s: current socket
     :param members: dictionary with connected members
-    :return:
     '''
 
     while True:
         try:
+            s.listen(MEMBERS_AMOUNT)
+            conn, addr = s.accept()
+            data = conn.recv(16384)
+            udata = data.decode("utf-8")
+            print("Data: " + udata)
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
+
+
+def send(s: socket.socket, members: dict):
+    '''
+    Sends message tщ all members
+    :param ip: source IP
+    :param s: current socket
+    :param members: dictionary with connected members
+    :return:
+    '''
+    while True:
+        try:
             ss = input('')
             for addr in list(members.keys()):
-                s.sendto(ss.encode('utf-8'), addr)
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.connect(addr)
+                s.send(ss.encode('utf-8'))
+                s.shutdown(1)
+                s.close()
 
         except KeyboardInterrupt:
             print('Bye!')
@@ -201,13 +175,15 @@ def send(s: socket.socket, members: dict):
 
 def main():
     # Create socket with its tools
-    s, name, members = create()
+    s, name, members, IP = create_udp()
+    sock = create_tcp(IP)
     greeting()
+
     # Create threads
     t1 = threading.Thread(target=connect, args=(s, name))
-    t2 = threading.Thread(target=listen, args=(s, members))
-    t3 = threading.Thread(target=check, args=(s, members))
-    t4 = threading.Thread(target=send, args=(s, members))
+    t2 = threading.Thread(target=listen_udp, args=(s, members))
+    t3 = threading.Thread(target=listen_tcp, args=(sock, members))
+    t4 = threading.Thread(target=send, args=(sock, members), daemon=True)
 
     # Start threads
     t1.start()
