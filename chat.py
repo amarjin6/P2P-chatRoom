@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import time
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
@@ -27,6 +28,7 @@ Here are some tips for YOU:
 * /help - Show how this message
 * /hooray - Beautiful greeting message
 * /history - Request history from members
+* /exit - Leave chat
 @Created by Alexander Marjin@
 '''
 
@@ -51,8 +53,8 @@ def usage():
 
 def create_udp():
     '''
-    Creates a socket object
-    :return: socket, username, empty dictionary
+    Creates a UDP socket object to find out who is online
+    :return: UDP socket, username, empty dictionary, IP
     '''
 
     if len(sys.argv) != 3:
@@ -77,6 +79,11 @@ def create_udp():
 
 
 def create_tcp(ip: str):
+    '''
+    Creates TCP socket object for delivery members messages
+    :param ip: member IP
+    :return: TCP socket
+    '''
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allows several applications to listen the socket
@@ -103,6 +110,7 @@ def connect(s: socket.socket, name: str):
     while True:
         try:
             s.sendto(f'__join{name}'.encode('utf-8'), ('255.255.255.255', PORT))
+            time.sleep(5)
         except KeyboardInterrupt:
             print('Bye!')
             sys.exit()
@@ -140,9 +148,10 @@ def listen_tcp(s: socket.socket, members: dict):
         try:
             s.listen(MEMBERS_AMOUNT)
             conn, addr = s.accept()
-            data = conn.recv(16384)
-            udata = data.decode("utf-8")
-            print("Data: " + udata)
+            msg = conn.recv(TCP_SIZE)
+            m = msg.decode('utf-8')
+            if m != '?':
+                print(m)
 
         except KeyboardInterrupt:
             print('Bye!')
@@ -155,7 +164,6 @@ def send(s: socket.socket, members: dict):
     :param ip: source IP
     :param s: current socket
     :param members: dictionary with connected members
-    :return:
     '''
     while True:
         try:
@@ -166,6 +174,32 @@ def send(s: socket.socket, members: dict):
                 s.connect(addr)
                 s.send(ss.encode('utf-8'))
                 s.shutdown(1)
+                s.close()
+
+        except KeyboardInterrupt:
+            print('Bye!')
+            sys.exit()
+
+
+def check_connection(members: dict):
+    '''
+    Checks whether there is still connected members
+    :param members: list with members
+    '''
+    while True:
+        try:
+            for addr in list(members.keys()):
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                try:
+                    s.connect(addr)
+                    s.send('?'.encode('utf-8'))
+
+                except socket.error:
+                    print(f'{members[addr]} left chat')
+                    del members[addr]
+
+                time.sleep(5)
                 s.close()
 
         except KeyboardInterrupt:
@@ -184,12 +218,14 @@ def main():
     t2 = threading.Thread(target=listen_udp, args=(s, members))
     t3 = threading.Thread(target=listen_tcp, args=(sock, members))
     t4 = threading.Thread(target=send, args=(sock, members), daemon=True)
+    t5 = threading.Thread(target=check_connection, args=(members,))
 
     # Start threads
     t1.start()
     t2.start()
     t3.start()
     t4.start()
+    t5.start()
 
 
 if __name__ == '__main__':
