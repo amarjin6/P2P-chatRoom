@@ -28,5 +28,9 @@ Messages are exchanged using TCP in a logically shared space: each node maintain
 * **Completed!**
 
 ## 🥽**Preview**🥽
+![UDvlfwdtJBk](https://user-images.githubusercontent.com/86531927/162975046-66154da2-59d9-40c3-b2ec-f68266b3ad1d.jpg)
+![joLzh9bX8yA](https://user-images.githubusercontent.com/86531927/162975076-1828e9b6-c7be-49db-a5fd-de8ec61cc12e.jpg)
+![Tscc239LrVk](https://user-images.githubusercontent.com/86531927/162975108-a4f36945-fe3b-4f58-99f8-6d2b372f1e5e.jpg)
+![J9afOu1CtKg](https://user-images.githubusercontent.com/86531927/162975135-0b2667cd-0e55-4a68-b2df-ef1176f964a0.jpg)
 
 # Python Socket Thread
