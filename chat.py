@@ -23,14 +23,14 @@ python chat.py 127.0.0.3 John
 '''
 
 GREETING = '''
-\u263A Welcome to chat! \u263A
+\u263b Welcome to chat! \u263b
 Here are some tips for YOU:
-* /members - Show all connected members
-* /help - Show how this message
-* /hooray - Beautiful greeting message
-* /history - Request history from members
-* /exit - Leave chat
-@Created by Alexander Marjin@
+\u263c /members - Show all connected members
+\u263c /help - Show how this message
+\u263c /hooray - Beautiful greeting message
+\u263c /history - Request history from members
+\u263c /exit - Leave chat
+Created by Alexander Marjin \u00a9
 '''
 
 HOORAY = '''
@@ -140,8 +140,12 @@ def check_connection(members: dict):
                     s.send('?'.encode('utf-8'))
 
                 except socket.error:
-                    print(f'{members[addr]} left chat')
-                    del members[addr]
+                    try:
+                        print(f'{members[addr]} left chat')
+                        del members[addr]
+
+                    except KeyError:
+                        continue
 
                 time.sleep(5)
                 s.close()
@@ -208,11 +212,13 @@ def listen_tcp(s: socket.socket, members: dict, history: list):
 
         elif msg_text != '?':
             now = datetime.now()
-            print(f'{now.strftime("%H:%M:%S")}: {msg_text}')
-            history.append(f'{now.strftime("%H:%M:%S")}: {msg_text}')
+            sender = (msg_text.split("/")[1], PORT)
+            mes = msg_text.split("/")[0]
+            print(f'{now.strftime("%H:%M:%S")} {members[sender]}: {mes}')
+            history.append(f'{now.strftime("%H:%M:%S")} {members[sender]}: {mes}')
 
 
-def send(s: socket.socket, members: dict, history: list):
+def send(s: socket.socket, members: dict, history: list, ip: str):
     """
     Sends message to all members
     :param s: current socket
@@ -244,6 +250,7 @@ def send(s: socket.socket, members: dict, history: list):
 
 
             else:
+                ss += '/' + ip
                 for addr in list(members.keys()):
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -273,7 +280,7 @@ def main():
     t1 = threading.Thread(target=connect, args=(s, name))
     t2 = threading.Thread(target=listen_udp, args=(s, members))
     t3 = threading.Thread(target=listen_tcp, args=(sock, members, history))
-    t4 = threading.Thread(target=send, args=(sock, members, history), daemon=True)
+    t4 = threading.Thread(target=send, args=(sock, members, history, IP), daemon=True)
     t5 = threading.Thread(target=check_connection, args=(members,))
 
     # Start threads
