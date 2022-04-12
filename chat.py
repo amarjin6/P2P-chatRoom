@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 import time
+from datetime import datetime
 
 UDP_SIZE = 65535  # UDP protocol maximus
 
@@ -103,7 +104,8 @@ def create_tcp(ip: str):
         print(f'Failed connection to host: {e}')
         sys.exit()
 
-    return s
+    history = []  # Messages history
+    return s, history
 
 
 def connect(s: socket.socket, name: str):
@@ -178,11 +180,12 @@ def listen_udp(s: socket.socket, members: dict):
             continue
 
 
-def listen_tcp(s: socket.socket, members: dict):
+def listen_tcp(s: socket.socket, members: dict, history: list):
     """
     Listens and analyze sent messages
     :param s: current socket
     :param members: dictionary with connected members
+    :param history: Messages history
     """
 
     while True:
@@ -190,33 +193,69 @@ def listen_tcp(s: socket.socket, members: dict):
             s.listen(MEMBERS_AMOUNT)
             conn, addr = s.accept()
             msg = conn.recv(TCP_SIZE)
-            m = msg.decode('utf-8')
-            if m != '?':
-                print(m)
 
         except KeyboardInterrupt:
             print('Bye!')
             s.close()
             sys.exit()
 
+        if not msg:
+            continue
 
-def send(s: socket.socket, members: dict):
+        msg_text = msg.decode('utf-8')
+        if msg_text == '/hooray':
+            print(HOORAY)
+
+        elif msg_text != '?':
+            now = datetime.now()
+            print(f'{now.strftime("%H:%M:%S")}: {msg_text}')
+            history.append(f'{now.strftime("%H:%M:%S")}: {msg_text}')
+
+
+def send(s: socket.socket, members: dict, history: list):
     """
-    Sends message tщ all members
+    Sends message to all members
     :param s: current socket
     :param members: dictionary with connected members
+    :param history: Messages history
     """
 
     while True:
         try:
             ss = input('')
-            for addr in list(members.keys()):
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.connect(addr)
-                s.send(ss.encode('utf-8'))
-                s.shutdown(1)
-                s.close()
+            if ss == '/members':
+                print('All active members:')
+                for addr in list(members.keys()):
+                    print(f'{members[addr]}: {addr[0]}')
+                continue
+
+            elif ss == '/help':
+                print(GREETING)
+                continue
+
+            elif ss == '/history':
+                print('HISTORY:')
+                for hist in history:
+                    print(hist)
+
+            elif ss == '/exit':
+                print('Bye!')
+                sys.exit(0)
+
+
+            else:
+                for addr in list(members.keys()):
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    try:
+                        s.connect(addr)
+                        s.send(ss.encode('utf-8'))
+
+                    except socket.error:
+                        print(f'{members[addr]} left chat')
+                        del members[addr]
+
+                    s.close()
 
         except KeyboardInterrupt:
             print('Bye!')
@@ -227,14 +266,14 @@ def send(s: socket.socket, members: dict):
 def main():
     # Create TCP/UDP sockets with its tools
     s, name, members, IP = create_udp()
-    sock = create_tcp(IP)
+    sock, history = create_tcp(IP)
     greeting()
 
     # Create threads
     t1 = threading.Thread(target=connect, args=(s, name))
     t2 = threading.Thread(target=listen_udp, args=(s, members))
-    t3 = threading.Thread(target=listen_tcp, args=(sock, members))
-    t4 = threading.Thread(target=send, args=(sock, members), daemon=True)
+    t3 = threading.Thread(target=listen_tcp, args=(sock, members, history))
+    t4 = threading.Thread(target=send, args=(sock, members, history), daemon=True)
     t5 = threading.Thread(target=check_connection, args=(members,))
 
     # Start threads
