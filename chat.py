@@ -224,6 +224,7 @@ def send(s: socket.socket, members: dict, history: list, ip: str):
     :param s: current socket
     :param members: dictionary with connected members
     :param history: Messages history
+    :param ip: Member's IP
     """
 
     while True:
@@ -246,6 +247,11 @@ def send(s: socket.socket, members: dict, history: list, ip: str):
 
             elif ss == '/exit':
                 print('Bye!')
+                try:
+                    s.close()
+                except socket.error:
+                    continue
+
                 sys.exit(0)
 
 
@@ -274,6 +280,7 @@ def main():
     # Create TCP/UDP sockets with its tools
     s, name, members, IP = create_udp()
     sock, history = create_tcp(IP)
+
     greeting()
 
     # Create threads
