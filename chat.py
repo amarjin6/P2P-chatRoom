@@ -254,6 +254,19 @@ def send(s: socket.socket, members: dict, history: list, ip: str):
 
                 sys.exit(0)
 
+            elif ss == '/hooray':
+                for addr in list(members.keys()):
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    try:
+                        s.connect(addr)
+                        s.send(ss.encode('utf-8'))
+
+                    except socket.error:
+                        print(f'{members[addr]} left chat')
+                        del members[addr]
+
+                    s.close()
 
             else:
                 ss += '/' + ip
