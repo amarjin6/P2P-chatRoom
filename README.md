@@ -4,7 +4,7 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/amarjin6/P2P-chatRoom?color=yellow&logo=Stackbit)
 ![GitHub watchers](https://img.shields.io/github/watchers/amarjin6/P2P-chatRoom?logo=wechat)
 
-# ⏰**Real-time messaging facility over a computer network**⏳
+# **Real-time messaging facility over a computer network**🏃
 
 ## 💡**Main idea**💡
 Create a software tool for exchanging text messages that works on a local network in peer-to-peer mode.
@@ -19,18 +19,84 @@ Messages are exchanged using TCP in a logically shared space: each node maintain
 ## 🔎**How to Install**🔍
 * **Clone project to your folder:** `git clone https://github.com/amarjin6/chat-room.git`
 * **Check for updates and install all necessary [plugins](https://github.com/amarjin6/P2P-chatRoom/tree/master/requirements)**
-* **Run project in terminal:** `python chat.py [host] [username]`
+* **Run project** 
 
 ## 🛠**How to Use**🛠
-* **Run the project in your terminal with different IP's**
-* **Send message to your chat member**
-* **Don't forget to read rules and active commands!**
-* **Completed!**
 
-## 🥽**Preview**🥽
-![UDvlfwdtJBk](https://user-images.githubusercontent.com/86531927/162975046-66154da2-59d9-40c3-b2ec-f68266b3ad1d.jpg)
-![joLzh9bX8yA](https://user-images.githubusercontent.com/86531927/162975076-1828e9b6-c7be-49db-a5fd-de8ec61cc12e.jpg)
-![Tscc239LrVk](https://user-images.githubusercontent.com/86531927/162975108-a4f36945-fe3b-4f58-99f8-6d2b372f1e5e.jpg)
-![J9afOu1CtKg](https://user-images.githubusercontent.com/86531927/162975135-0b2667cd-0e55-4a68-b2df-ef1176f964a0.jpg)
+### **Run the project in your terminal with different IP's**
+
+    python chat.py [host] [username]
+    
+### **Establish connection**
+
+Connection established automatically after each member joins chat
+
+Example: New member joined chat 
+
+    python chat.py 127.0.0.1 Alex
+    Alex joined chat
+
+
+> **Warning** <br>
+> Don't use the same host for multiple members!    
+
+
+### **Sending messages**
+
+After connection to the server, you can easily communicate with all members in the chat
+
+Example: Alex 'Hello, it's ME!'
+
+    hh:mm:ss Alex: Hello, it's ME!
+
+There you can see the time, when each member sent the message
+
+> **Note** <br>
+> For more functionality use active commands
+
+### **Active commands**
+
+#### **Members**
+This command shows all active members with their IP's in the chat
+
+    /members
+    All active memebers:
+    Alex: 127.0.0.1
+    Tim: 127.0.0.2
+    John: 127.0.0.3
+
+#### **Help**    
+This command shows active commands toolbar
+
+    👼Welcome to the chat!👼
+    Here are some tips for YOU:
+    ‣ /members - Show all connected members
+    ‣ /help - Show this message
+    ‣ /hooray - Beautiful greeting message
+    ‣ /history - Request history from members
+    ‣ /exit - Leave chat
+
+#### **Hooray**
+This command shows beautiful greeting message
+
+    /hooray
+    Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentiumoptio, eaque rerum! Provident similique accusantium nemo autem.
+
+#### **History**
+This command shows request history from members
+
+    /history
+    hh:mm:ss Alex: Hello, it's ME!
+    hh:mm:ss Tim: Hello, Alex
+    hh:mm:ss John: Hi!
+
+#### **Exit**
+With the help of this command you can leave chat
+    
+    /exit
+    Alex left chat
+
+> **Note** <br>
+> This message shows even if you stops programm
 
 # Python Socket Thread
