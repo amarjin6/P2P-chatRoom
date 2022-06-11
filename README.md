@@ -36,10 +36,8 @@ Example: New member joined chat
     python chat.py 127.0.0.1 Alex
     Alex joined chat
 
-
 > **Warning** <br>
 > Don't use the same host for multiple members!    
-
 
 ### **Sending messages**
 
